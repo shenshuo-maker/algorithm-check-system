@@ -1,0 +1,25 @@
+# 勿提交打包备份（体积大且易被 GitHub 拒绝）
+*.zip
+*.7z
+*.rar
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.log
+
+# 密钥与本地环境
+.env
+.env.*
+
+# 运行生成的批量结果（可重新生成）
+backend/batch_result.csv
+
+# 本机下载的 BERT 权重体积很大，勿提交；config/tokenizer 等小文件可保留
+backend/bert_algorithm_model/*.bin
+backend/bert_algorithm_model/*.safetensors
+backend/bert_algorithm_model/*.pt
+backend/bert_algorithm_model/*.pth
+backend/bert_algorithm_model/*.onnx

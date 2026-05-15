@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>算法备案文本智能合规检测系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #f5f7fa; padding: 20px; font-family: "Microsoft Yahei", sans-serif; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { font-size: 20px; font-weight: bold; margin-bottom: 20px; }
+        .status-bar { background: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .tab { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab-item { padding: 10px 20px; background: #e4e7ed; border-radius: 4px; cursor: pointer; }
+        .tab-item.active { background: #409eff; color: white; }
+        .card { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .textarea { width: 100%; height: 200px; padding: 10px; border: 1px solid #dcdfe6; border-radius: 4px; }
+        .btn { padding: 8px 15px; background: #409eff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .btn:disabled { background: #c0c4cc; cursor: not-allowed; }
+        .result { margin-top: 20px; padding: 15px; background: white; border-radius: 8px; }
+        .score { font-size: 24px; font-weight: bold; color: #67c23a; }
+        .score.danger { color: #f56c6c; }
+        .tag { display: inline-block; padding: 4px 8px; background: #67c23a; color: white; border-radius: 4px; font-size: 12px; margin-right: 5px; }
+        .tag.danger { background: #f56c6c; }
+        .upload-area { border: 2px dashed #dcdfe6; padding: 40px; text-align: center; border-radius: 8px; cursor: pointer; margin-bottom: 10px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin: 15px 0; }
+        .stat-item { text-align: center; }
+        .stat-label { font-size: 14px; color: #909090; }
+        .stat-value { font-size: 20px; font-weight: bold; }
+        .stat-value.compliance { color: #67c23a; }
+        .stat-value.risk { color: #f56c6c; }
+        [v-cloak] { display: none !important; }
+        .vue-boot-error { display: none; max-width: 720px; margin: 24px auto; padding: 16px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; color: #856404; line-height: 1.6; }
+        .vue-boot-error code { background: #fff; padding: 2px 6px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div id="vue-boot-error" class="vue-boot-error">
+        <strong>前端框架未加载（Vue），页面上的 {{ }} 是模板符号，未被渲染。</strong>
+        <p style="margin-top: 8px;">请按顺序排查：</p>
+        <ol style="margin: 8px 0 0 18px;">
+            <li>在 <code>frontend</code> 文件夹里打开终端，执行：<code>python -m http.server 5500</code></li>
+            <li>浏览器地址栏输入：<code>http://127.0.0.1:5500/index.html</code>（勿用「文件」双击打开）</li>
+            <li>若 http.server 是在<strong>上一级目录</strong>启动的，请改用：<code>http://127.0.0.1:5500/frontend/index.html</code></li>
+            <li>强制刷新：<code>Ctrl + F5</code>；仍失败则在 <code>frontend</code> 下执行 <code>python download_lib.py</code> 重新下载依赖</li>
+        </ol>
+    </div>
+    <div id="app" class="container" v-cloak>
+        <div class="header">算法备案文本智能合规检测系统</div>
+        <div style="color: #606266; font-size: 14px; margin: -12px 0 16px; line-height: 1.6;">
+            检测对象：<strong>企业算法备案材料</strong>（备案说明等正式文本或其 PDF/TXT）。大创申报书等仅用于说明课题背景，请勿当作备案文件上传检测。
+        </div>
+
+        <div class="status-bar">
+            <span class="tag" :class="healthStatus ? '' : 'danger'">
+                {{ healthStatus ? '系统运行正常' : '系统未连接' }}
+            </span>
+            <span style="margin-left: 10px;">模型：BERT算法备案合规检测模型 | 运行设备：{{ deviceInfo }}</span>
+            <button class="btn" style="margin-left: 10px;" @click="checkHealth" :disabled="loading">刷新状态</button>
+        </div>
+
+        <div class="tab">
+            <div class="tab-item" :class="{ active: activeTab === 'single' }" @click="activeTab = 'single'">单文本检测</div>
+            <div class="tab-item" :class="{ active: activeTab === 'batch' }" @click="activeTab = 'batch'">批量文件检测</div>
+        </div>
+
+        <!-- 单文本检测 -->
+        <div class="card" v-if="activeTab === 'single'">
+            <div style="margin-bottom: 10px;">企业算法备案文本</div>
+            <textarea class="textarea" v-model="singleText" placeholder="请粘贴企业算法备案材料中的正文（如算法机制说明、数据与安全相关段落等，不少于10个字）"></textarea>
+            <div style="margin-top: 10px;">
+                <button class="btn" @click="predictSingle" :disabled="loading || !singleText">
+                    {{ loading ? '检测中...' : '立即检测' }}
+                </button>
+                <button class="btn" style="background: #909399; margin-left: 10px;" @click="singleText = ''; singleResult = null">清空文本</button>
+            </div>
+        </div>
+        <div class="result" v-if="singleResult && activeTab === 'single'">
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <div>
+                    <div class="score" :class="singleResult.result === '合规' ? '' : 'danger'">
+                        {{ singleResult.score }}%
+                    </div>
+                    <div class="tag" :class="singleResult.result === '合规' ? '' : 'danger'">
+                        {{ singleResult.result }}
+                    </div>
+                </div>
+                <div>
+                    <div style="margin-bottom: 10px;">风险点：{{ singleResult.risk }}</div>
+                    <div>合规条款依据：
+                        <span class="tag" v-for="(rule, idx) in singleResult.rules" :key="idx">
+                            {{ rule }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 批量文件检测 -->
+        <div class="card" v-if="activeTab === 'batch'">
+            <div class="upload-area" @click="triggerFileInput">
+                <div style="font-size: 18px; margin-bottom: 10px;">📁 拖放文件到此处，或点击上传</div>
+                <div style="color: #909090; font-size: 14px;">支持格式：csv/txt/pdf | 请使用<strong>企业算法备案文件</strong>（PDF 多为备案系统导出或企业整理稿）</div>
+                <div style="color: #909090; font-size: 12px; margin-top: 10px;">CSV 需含「content」列，每行一条备案相关文本 | 单次仅支持 1 个文件</div>
+            </div>
+            <input type="file" id="fileInput" style="display: none;" accept=".csv,.txt,.pdf" @change="handleFileUpload" />
+            <div style="margin-top: 10px;">
+                <button class="btn" @click="triggerFileInput" :disabled="loading">选择文件</button>
+                <button class="btn" style="background: #909399; margin-left: 10px;" @click="clearBatch">清空选择</button>
+            </div>
+            <div style="margin-top: 10px; color: #409eff;" v-if="selectedFile">
+                已选择：{{ selectedFile.name }}
+            </div>
+        </div>
+        <div class="result" v-if="batchSummary && activeTab === 'batch'">
+            <div style="font-weight: bold; margin-bottom: 15px;">批量检测统计结果（CSV）</div>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-label">总检测数</div>
+                    <div class="stat-value">{{ batchSummary.total }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">合规数</div>
+                    <div class="stat-value compliance">{{ batchSummary.compliance_num }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">不合规数</div>
+                    <div class="stat-value risk">{{ batchSummary.non_compliance_num }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">合规率</div>
+                    <div class="stat-value">{{ batchSummary.total ? ((batchSummary.compliance_num / batchSummary.total) * 100).toFixed(2) : '0.00' }}%</div>
+                </div>
+            </div>
+            <div style="color: #909090; font-size: 14px;">结果文件：{{ batchSummary.file_path }}（保存在服务器 backend 目录）</div>
+            <button class="btn" style="margin-top: 15px;" @click="downloadBatchResult">下载批量检测结果</button>
+        </div>
+        <div class="result" v-if="batchFileResult && activeTab === 'batch'">
+            <div style="font-weight: bold; margin-bottom: 12px;">单文件检测结果（企业备案 TXT/PDF）</div>
+            <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                <div>
+                    <div class="score" :class="batchFileResult.result === '合规' ? '' : 'danger'">{{ batchFileResult.score }}%</div>
+                    <div class="tag" :class="batchFileResult.result === '合规' ? '' : 'danger'">{{ batchFileResult.result }}</div>
+                </div>
+                <div>
+                    <div style="margin-bottom: 10px;">风险点：{{ batchFileResult.risk }}</div>
+                    <div>合规条款依据：
+                        <span class="tag" v-for="(rule, idx) in batchFileResult.rules" :key="idx">{{ rule }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center; color: #909090; margin-top: 20px; line-height: 1.6;">
+            面向企业算法备案材料的合规辅助检测 | 基于 BERT 等深度学习模型 | 法规提示参考《互联网信息服务算法推荐管理规定》《数据安全法》《个人信息保护法》等
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            function showBootError() {
+                var el = document.getElementById('vue-boot-error')
+                if (el) el.style.display = 'block'
+            }
+            function mountApp() {
+                if (typeof Vue === 'undefined') {
+                    showBootError()
+                    return
+                }
+                var createApp = Vue.createApp
+                createApp({
+                    data: function () {
+                        return {
+                            activeTab: 'single',
+                            singleText: '',
+                            loading: false,
+                            healthStatus: false,
+                            deviceInfo: '未知',
+                            singleResult: null,
+                            selectedFile: null,
+                            batchSummary: null,
+                            batchFileResult: null,
+                            backendUrl: 'http://127.0.0.1:8000'
+                        }
+                    },
+                    mounted: function () {
+                        this.checkHealth()
+                    },
+                    methods: {
+                        checkHealth: async function () {
+                            this.loading = true
+                            try {
+                                var res = await fetch(this.backendUrl + '/api/health')
+                                var data = await res.json()
+                                if (res.ok && (data.code === 200 || data.status === 'ok')) {
+                                    this.healthStatus = true
+                                    this.deviceInfo = data.device || '未知'
+                                } else {
+                                    this.healthStatus = false
+                                    this.deviceInfo = '未知'
+                                    alert(data.msg || '系统连接失败')
+                                }
+                            } catch (e) {
+                                this.healthStatus = false
+                                this.deviceInfo = '未知'
+                                alert('后端服务未启动或地址不可达，请先启动 backend（默认端口 8000）')
+                            } finally {
+                                this.loading = false
+                            }
+                        },
+                        predictSingle: async function () {
+                            if (!this.singleText || this.singleText.length < 10) {
+                                alert('请输入不少于10个字的备案文本')
+                                return
+                            }
+                            this.loading = true
+                            try {
+                                var formData = new FormData()
+                                formData.append('text', this.singleText)
+                                var res = await fetch(this.backendUrl + '/api/predict/single', {
+                                    method: 'POST',
+                                    body: formData
+                                })
+                                var json = await res.json()
+                                if (!res.ok || json.code !== 200) {
+                                    alert(json.detail || json.msg || '检测失败')
+                                    return
+                                }
+                                this.singleResult = json.data
+                            } catch (e) {
+                                alert('检测失败，请检查后端服务')
+                            } finally {
+                                this.loading = false
+                            }
+                        },
+                        triggerFileInput: function () {
+                            document.getElementById('fileInput').click()
+                        },
+                        handleFileUpload: async function (event) {
+                            var file = event.target.files[0]
+                            if (!file) return
+                            var allowedTypes = ['text/csv', 'text/plain', 'application/pdf']
+                            if (!allowedTypes.includes(file.type) && !file.name.match(/\.(csv|txt|pdf)$/)) {
+                                alert('仅支持上传 csv/txt/pdf 格式文件')
+                                return
+                            }
+                            this.selectedFile = file
+                            this.loading = true
+                            this.batchSummary = null
+                            this.batchFileResult = null
+                            var formData = new FormData()
+                            formData.append('file', file)
+                            try {
+                                var res = await fetch(this.backendUrl + '/api/predict/batch', {
+                                    method: 'POST',
+                                    body: formData
+                                })
+                                var json = await res.json()
+                                if (!res.ok || json.code !== 200) {
+                                    var msg = (json.detail && (typeof json.detail === 'string' ? json.detail : JSON.stringify(json.detail))) || json.msg || '批量检测失败'
+                                    alert(msg)
+                                    return
+                                }
+                                var d = json.data
+                                if (d && typeof d.total === 'number') {
+                                    this.batchSummary = d
+                                    this.batchFileResult = null
+                                } else if (d) {
+                                    this.batchFileResult = d
+                                    this.batchSummary = null
+                                }
+                            } catch (e) {
+                                alert('批量检测失败，请检查后端服务')
+                            } finally {
+                                this.loading = false
+                            }
+                        },
+                        clearBatch: function () {
+                            this.selectedFile = null
+                            this.batchSummary = null
+                            this.batchFileResult = null
+                            document.getElementById('fileInput').value = ''
+                        },
+                        downloadBatchResult: function () {
+                            if (this.batchSummary && this.batchSummary.file_path) {
+                                window.open(this.backendUrl + '/api/download/batch', '_blank')
+                            } else {
+                                alert('请先完成 CSV 批量检测后再下载')
+                            }
+                        }
+                    }
+                }).mount('#app')
+            }
+            function loadScript(src, onload, onerror, crossOrigin) {
+                var s = document.createElement('script')
+                s.src = src
+                if (crossOrigin) s.crossOrigin = 'anonymous'
+                s.onload = onload
+                s.onerror = onerror
+                document.body.appendChild(s)
+            }
+            function afterLocal() {
+                if (typeof Vue !== 'undefined') {
+                    mountApp()
+                    return
+                }
+                loadScript(
+                    'https://cdn.jsdelivr.net/npm/vue@3.5.13/dist/vue.global.prod.js',
+                    function () {
+                        if (typeof Vue !== 'undefined') mountApp()
+                        else loadScript('https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js', function () {
+                            if (typeof Vue !== 'undefined') mountApp()
+                            else showBootError()
+                        }, showBootError, true)
+                    },
+                    function () {
+                        loadScript('https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js', function () {
+                            if (typeof Vue !== 'undefined') mountApp()
+                            else showBootError()
+                        }, showBootError, true)
+                    },
+                    true
+                )
+            }
+            loadScript('lib/vue.global.prod.js', afterLocal, afterLocal, false)
+        })()
+    </script>
+</body>
+</html>
