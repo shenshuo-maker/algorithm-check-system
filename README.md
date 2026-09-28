@@ -1,5 +1,13 @@
 # 算法备案文本智能合规检测系统
 
+<p>
+  <img src="https://img.shields.io/badge/省级大创-负责人-B4532A?style=for-the-badge" alt="大创">
+  <img src="https://img.shields.io/badge/BERT-合规检测-1F3B4D?style=for-the-badge" alt="BERT">
+  <img src="https://img.shields.io/badge/FastAPI_+_Vue-3776AB?style=for-the-badge" alt="stack">
+</p>
+
+省级大创。面向算法备案正式文本的辅助检测，不是通用论文查重。
+
 ## 项目简介
 
 本项目基于深度学习 BERT 模型，对企业向监管部门提交的**算法备案文件**（备案说明、主体信息、算法机制说明等正式材料）做智能合规性辅助检测，支持单段文本与批量文件（CSV / TXT / PDF），并结合法规要求给出风险提示与条款依据说明。
