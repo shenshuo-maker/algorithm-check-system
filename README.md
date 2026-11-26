@@ -1,12 +1,25 @@
-# 算法备案文本智能合规检测系统
-
-<p>
-  <img src="https://img.shields.io/badge/省级大创-负责人-B4532A?style=for-the-badge" alt="大创">
-  <img src="https://img.shields.io/badge/BERT-合规检测-1F3B4D?style=for-the-badge" alt="BERT">
-  <img src="https://img.shields.io/badge/FastAPI_+_Vue-3776AB?style=for-the-badge" alt="stack">
+<p align="center">
+  <img src="assets/header.svg" width="960" alt="algorithm filing check: BERT plus regulation graph">
 </p>
 
-省级大创。面向算法备案正式文本的辅助检测，不是通用论文查重。
+<p align="center">
+  <img src="https://img.shields.io/badge/省级大创-负责人-1B3A2F?style=flat-square&labelColor=101614" alt="大创">
+  <img src="https://img.shields.io/badge/model-BERT-C4A35A?style=flat-square&labelColor=101614" alt="BERT">
+  <img src="https://img.shields.io/badge/api-FastAPI-8FD0B0?style=flat-square&labelColor=101614" alt="FastAPI">
+  <img src="https://img.shields.io/badge/ui-Vue-5F756C?style=flat-square&labelColor=101614" alt="Vue">
+</p>
+
+省级大创。对象是企业提交的算法备案正式文本，不是论文查重，也不是代码沙箱。单段、CSV、TXT、PDF 进同一条检测链，输出风险点和条款依据。
+
+```mermaid
+flowchart LR
+  A["备案文本"] --> B["BERT 二分类"]
+  A --> C["法规图谱"]
+  B --> D["风险点"]
+  C --> D
+  D --> E["条款依据 / 整改建议"]
+```
+
 
 ## 项目简介
 

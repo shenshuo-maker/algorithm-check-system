@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="180" viewBox="0 0 960 180" role="img">
+  <rect width="960" height="180" rx="16" fill="#101614"/>
+  <rect x="1" y="1" width="958" height="178" rx="15" fill="none" stroke="#31483c"/>
+  
+  <path d="M18 18 H42 M18 18 V42 M942 18 H918 M942 18 V42 M18 162 H42 M18 162 V138 M942 162 H918 M942 162 V138" stroke="#e2b657" stroke-width="1.4" fill="none"/>
+
+  <text x="40" y="58" fill="#e2b657" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="13" letter-spacing="2.4">FILING  /  TEXT CHECK</text>
+  <text x="40" y="104" fill="#e8f2ec" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="36" font-weight="650">algorithm-check</text>
+  <text x="40" y="140" fill="#93a89c" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="15">bert classifier   ·   regulation graph   ·   fastapi</text>
+  <rect x="748" y="48" width="164" height="84" rx="8" fill="#17241d" stroke="#31483c"/>
+  <text x="770" y="80" fill="#5f756c" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11">STATUS</text>
+  <text x="770" y="108" fill="#8fd0b0" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="16">SHIPPED</text>
+
+</svg>
